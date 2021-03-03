@@ -32,6 +32,8 @@
         <CommandBinding Command="{x:Static local:CustomCommands.AboutCommand}" CanExecute="CommandBinding_CanExecute" Executed="About_Execute"/>
         <CommandBinding Command="{x:Static local:CustomCommands.AddHelpCommand}" Executed="Additional_Help"/>
         <CommandBinding Command="{x:Static local:CustomCommands.SettingsCommand}" Executed="Settings_Execute"/>
+        <CommandBinding Command="{x:Static local:CustomCommands.ViewGanttCommand}" CanExecute="CanIf_HasProject" Executed="CommandGanttView_Executed"/>
+        <CommandBinding Command="{x:Static local:CustomCommands.ViewWBSCommand}" CanExecute="CanIf_HasProject" Executed="CommandWBSView_Executed"/>
     </Window.CommandBindings>
     <Window.InputBindings>
         <KeyBinding Key="N" Modifiers="Control" Command="New"/>
@@ -79,6 +81,10 @@
                     <MenuItem Command="Cut"/>
                     <MenuItem Command="Copy"/>
                     <MenuItem Command="Paste"/>
+                </MenuItem>
+                <MenuItem Header="_View">
+                    <MenuItem Command="{x:Static local:CustomCommands.ViewGanttCommand}"/>
+                    <MenuItem Command="{x:Static local:CustomCommands.ViewWBSCommand}"/>
                 </MenuItem>
                 <MenuItem Header="_Tools">
                     <MenuItem Command="{x:Static local:CustomCommands.AddTaskCommand}"/>

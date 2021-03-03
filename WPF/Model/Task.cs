@@ -118,6 +118,39 @@ namespace SmartPert.Model
             PostInit(insert, track);
         }
 
+
+        /// <summary>
+        /// Get a unique Task based on name by incrementing digits after it
+        /// Created by Robert Nelson 3/2/2021
+        /// </summary>
+        /// <param name="name">The task name to try</param>
+        /// <returns>Task</returns>
+        static public Task GetUniqueTask(string name="Task")
+        {
+            Model model = Model.Instance;
+            List<Task> tasks = Model.Instance.GetTasks();
+            // Extract ending digits
+            int i, start;
+            string tryname;
+            for (i = name.Length; i >= 0; --i)
+                if (!char.IsDigit(name[i]))
+                    break;
+            if (i < name.Length - 1) {
+                start = Int32.Parse(name.Substring(i + 1));
+                tryname = name.Substring(0, i + 1);
+            }
+            else {
+                start = 0;
+                tryname = name;
+            }
+            // Now find a unique name
+            while(tasks.Find(x => x.Name == name) != null)
+            {
+                ++start;
+                name = tryname + start.ToString();
+            }
+            return model.CreateTask(name, DateTime.Now, null);
+        }
         #endregion
 
         #region Workers

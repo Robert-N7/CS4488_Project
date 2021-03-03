@@ -19,6 +19,7 @@ using System.Windows.Threading;
 using SmartPert.View.Windows;
 using MessageBox = System.Windows.MessageBox;
 using PrintDialog = System.Windows.Controls.PrintDialog;
+using SmartPert.View.WBS;
 
 /// <summary>
 /// Name space for the SmartPert Pert Application
@@ -34,6 +35,7 @@ namespace SmartPert
         private IModel model;
         //private Chart chart;
         private WorkSpace workSpace;
+        private WBS wbs;
         private ObservableCollection<MenuItemViewModel> items;
         public ObservableCollection<MenuItemViewModel> OpenItems { get => items; }
         
@@ -320,9 +322,31 @@ namespace SmartPert
                 pc.Project = p;
             pc.ShowDialog();
         }
-#endregion
 
-#region Model Update
+        private void CanIf_HasProject(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = model.GetProject() != null;
+        }
+
+        private void CommandGanttView_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (MainContent.Content.GetType() != typeof(WorkSpace))
+                MainContent.Content = new WorkSpace();
+        }
+
+        private void CommandWBSView_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (MainContent.Content.GetType() != typeof(WBS))
+            {
+                if (wbs == null || wbs.Project != model.GetProject())
+                    wbs = new WBS();
+                MainContent.Content = wbs;
+            }
+        }
+
+        #endregion
+
+        #region Model Update
         public void OnModelUpdate(Project p)
         {
             PopulateProjects();
@@ -335,7 +359,7 @@ namespace SmartPert
             foreach (Project p in model.GetProjectList())
                 items.Add(new MenuItemViewModel(p.Name, new OpenProjectCommand(model, p)));
         }
-#endregion
+        #endregion
 
     }
 }

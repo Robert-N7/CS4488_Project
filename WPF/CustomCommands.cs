@@ -52,5 +52,15 @@ namespace SmartPert
         {
             new KeyGesture(Key.S, ModifierKeys.Control)
         }));
+
+        public static readonly RoutedCommand ViewWBSCommand = new RoutedUICommand("WBS Hierarchy", "WBS Hierarchy", typeof(MainWindow), new InputGestureCollection(new InputGesture[]
+        {
+            new KeyGesture(Key.W, ModifierKeys.Control)
+        }));
+
+        public static readonly RoutedCommand ViewGanttCommand = new RoutedUICommand("Gantt Chart", "Gantt Chart", typeof(MainWindow), new InputGestureCollection(new InputGesture[]
+        {
+            new KeyGesture(Key.G, ModifierKeys.Control)
+        }));
     }
 }

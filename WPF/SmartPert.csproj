@@ -190,6 +190,12 @@
     <Compile Include="View\Controls\TaskControl.xaml.cs">
       <DependentUpon>TaskControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="View\WBS\Anchor.cs" />
+    <Compile Include="View\WBS\Connector.cs" />
+    <Compile Include="View\WBS\WBS_Task.xaml.cs">
+      <DependentUpon>WBS_Task.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\WBS\CtrlHitTest.cs" />
     <Compile Include="View\Login\LoginPage.xaml.cs">
       <DependentUpon>LoginPage.xaml</DependentUpon>
     </Compile>
@@ -208,6 +214,9 @@
     <Compile Include="TaskToolTip.cs" />
     <Compile Include="View\Pages\ErrorCatch.xaml.cs">
       <DependentUpon>ErrorCatch.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\WBS\WBS.xaml.cs">
+      <DependentUpon>WBS.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\Windows\ProjectCreator.xaml.cs">
       <DependentUpon>ProjectCreator.xaml</DependentUpon>
@@ -258,6 +267,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="View\WBS\WBS_Task.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="View\Login\LoginPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -281,6 +294,10 @@
     <Page Include="View\Pages\TaskGrid.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="View\WBS\WBS.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="View\Windows\ProjectCreator.xaml">
       <SubType>Designer</SubType>
