@@ -1,4 +1,5 @@
-﻿using SmartPert.Model;
+﻿using SmartPert.Command;
+using SmartPert.Model;
 using SmartPert.View.Pages;
 using System;
 using System.Collections.Generic;
@@ -20,14 +21,12 @@ namespace SmartPert.View.WBS
     /// Interaction logic for WBS_Task.xaml
     /// Created 3/2/2021 by Robert Nelson
     /// </summary>
-    public partial class WBS_Task : UserControl, IItemObserver, IConnectable
+    public partial class WBS_Task : Connectable, IItemObserver
     {
         private Task task;
-        private List<Anchor> anchors;
         protected bool isDragging;
         private Point clickPosition;
         private Point origin;   // The origin of tranformation
-        private Canvas canvas;
 
         #region Properties
         /// <summary>
@@ -38,7 +37,7 @@ namespace SmartPert.View.WBS
             get
             {
                 if (task == null)
-                    task = Task.GetUniqueTask();
+                    Task = Task.GetUniqueTask();
                 return task;
             }
 
@@ -57,7 +56,7 @@ namespace SmartPert.View.WBS
         {
             get => Task.Name; set
             {
-                Task.Name = value;
+                new EditTaskCmd(Task, value, Task.StartDate, Task.EndDate, Task.LikelyDuration, Task.MaxDuration, Task.MinDuration, Task.Description).Run();
             }
         }
 
@@ -67,30 +66,13 @@ namespace SmartPert.View.WBS
         public int Estimate { get => Task.LikelyDuration; set => Task.LikelyDuration = value; }
 
         /// <summary>
-        /// Connector Visibility
+        /// If true, the canvas will automatically resize in the onMove event (doesn't work)
         /// </summary>
-        public bool ConnectorVisible
+        protected bool ResizableCanvas
         {
-            get => TopConnector.IsVisible;
-            set
-            {
-                var visible = value ? Visibility.Visible : Visibility.Hidden;
-                TopConnector.Visibility = visible;
-                LeftConnector.Visibility = visible;
-                RightConnector.Visibility = visible;
-                BottomConnector.Visibility = visible;
-            }
+            get; set;
         }
 
-        public Canvas Canvas
-        {
-            get => canvas;
-            set
-            {
-                canvas = value;
-                canvas.Children.Add(this);
-            }
-        }
         #endregion
 
         #region Constructor
@@ -102,24 +84,20 @@ namespace SmartPert.View.WBS
             InitializeComponent();
             DataContext = this;
             EstimateEdit.IntegerChange = OnEstimateChange;
-            ConnectorVisible = false;
             this.MouseLeftButtonDown += new MouseButtonEventHandler(Control_MouseLeftButtonDown);
             this.MouseLeftButtonUp += new MouseButtonEventHandler(Control_MouseLeftButtonUp);
             this.MouseMove += new MouseEventHandler(Control_MouseMove);
+            Init_Anchors();
+            ResizableCanvas = true;
         }
 
-        public void Init_Anchors(Canvas canvas)
+        private void Init_Anchors()
         {
-            anchors = new List<Anchor>();
-            anchors.Add(RightConnector);
-            anchors.Add(LeftConnector);
-            anchors.Add(BottomConnector);
-            anchors.Add(TopConnector);
-            foreach(Anchor anchor in anchors)
-            {
-                anchor.Canvas = canvas;
-                anchor.Connectable = this;
-            }
+            AddAnchor(RightConnector);
+            AddAnchor(LeftConnector);
+            AddAnchor(BottomConnector);
+            AddAnchor(TopConnector);
+            AnchorsVisible = false;
         }
 
         ~WBS_Task()
@@ -129,17 +107,7 @@ namespace SmartPert.View.WBS
         }
         #endregion
 
-
         #region Private Methods
-        private void UserControl_GotFocus(object sender, RoutedEventArgs e)
-        {
-            ConnectorVisible = true;
-        }
-
-        private void UserControl_LostFocus(object sender, RoutedEventArgs e)
-        {
-            ConnectorVisible = false;
-        }
 
         private void Control_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -148,6 +116,8 @@ namespace SmartPert.View.WBS
                 isDragging = true;
                 var draggableControl = sender as UserControl;
                 clickPosition = e.GetPosition(this.Parent as UIElement);
+                origin.X = Canvas.GetLeft(this);
+                origin.Y = Canvas.GetTop(this);
                 draggableControl.CaptureMouse();
             }
         }
@@ -159,12 +129,6 @@ namespace SmartPert.View.WBS
                 isDragging = false;
                 var draggable = sender as UserControl;
                 draggable.ReleaseMouseCapture();
-                var transform = draggable.RenderTransform as TranslateTransform;
-                if (transform != null)  // Store the last transform
-                {
-                    origin.X = transform.X;
-                    origin.Y = transform.Y;
-                }
             }
         }
 
@@ -176,45 +140,65 @@ namespace SmartPert.View.WBS
             {
                 Point currentPosition = e.GetPosition(this.Parent as UIElement);
 
-                var transform = draggableControl.RenderTransform as TranslateTransform;
-                if (transform == null)
-                {
-                    transform = new TranslateTransform();
-                    draggableControl.RenderTransform = transform;
-                }
+                double x = currentPosition.X - clickPosition.X + origin.X;
+                double y = currentPosition.Y - clickPosition.Y + origin.Y;
+                Canvas.SetLeft(this, x);
+                Canvas.SetTop(this, y);
+                OnMove(x, y);
+            }
+        }
+        #endregion
 
-                transform.X = currentPosition.X - clickPosition.X;
-                transform.Y = currentPosition.Y - clickPosition.Y;
-                if (origin != null)
+        #region Protected Methods
+        protected override void OnMove(double x, double y)
+        {
+            base.OnMove(x, y);
+            bool needsResize = false;
+            // Handle too far right
+            if (x + ActualWidth > Canvas.ActualWidth)
+                if (!ResizableCanvas)
+                    Canvas.SetLeft(this, Canvas.ActualWidth - Width);
+                else
                 {
-                    transform.X += origin.X;
-                    transform.Y += origin.Y;
+                    needsResize = true;
+                    Canvas.Width = x + ActualWidth * 2;
                 }
-                foreach (Anchor a in anchors)
-                    a.OnMove(currentPosition);
+            //handle too far left
+            if (x < 0)
+                Canvas.SetLeft(this, 0);
+            //handle too far up
+            if (y < 0)
+                Canvas.SetTop(this, 0);
+            //handle too far down
+            if (y + ActualHeight > Canvas.ActualHeight)
+                if (!ResizableCanvas)
+                    Canvas.SetTop(this, Canvas.ActualHeight - ActualHeight);
+                else
+                {
+                    Canvas.Height = y + ActualHeight * 2;
+                    needsResize = true;
+                }
+            if(needsResize)
+            {
+                GrowCanvas(Canvas, Canvas.Width, Canvas.Height);
             }
         }
         #endregion
 
         #region Public Methods
-        ///// <summary>
-        ///// Connects the task to this one, making it a subtask
-        ///// </summary>
-        ///// <param name="task">subtask</param>
-        //public void Connect(WBS_Task task, Line connector)
-        //{
-        //    if(task != null)
-        //    {
-        //        // The start (x1, y1) should already be at one of our connectors
-        //        // Hook connector to top connector of task
-        //        Point point = task.TopConnector.TransformToAncestor(Parent as Visual).Transform(new Point(0, 0));
-        //        connector.X2 = point.X;
-        //        connector.Y2 = point.Y;
-        //        // todo, add task as subtask
-
-        //    }
-
-        //}
+        /// <summary>
+        /// Grows the canvas to fit width and height, Does not shrink if it's smaller than actual size!
+        /// </summary>
+        /// <param name="canvas">canvas</param>
+        /// <param name="width">width to adjust to</param>
+        /// <param name="height">height to adjust to</param>
+        public static void GrowCanvas(Canvas canvas, double width, double height)
+        {
+            width = Double.IsNaN(width) || canvas.ActualWidth > width ? canvas.ActualWidth : width;
+            height = Double.IsNaN(height) || canvas.ActualHeight > height ? canvas.ActualHeight : height;
+            canvas.Measure(new Size(width, height));
+            canvas.Arrange(new Rect(new Point(0, 0), canvas.DesiredSize));
+        }
 
         /// <summary>
         /// Estimate has changed
@@ -237,7 +221,6 @@ namespace SmartPert.View.WBS
             task = null;
         }
 
-        // Override default hit test support in visual object.
         protected override HitTestResult HitTestCore(PointHitTestParameters hitTestParameters)
         {
             Point pt = hitTestParameters.HitPoint;
@@ -245,29 +228,15 @@ namespace SmartPert.View.WBS
             return new PointHitTestResult(this, pt);
         }
 
-        public void OnConnect(Anchor sender, IConnectable target, bool isReceiver)
+        public override void OnConnect(Anchor sender, Connectable target, bool isReceiver)
         {
             // todo, add as subtask/parent task
         }
 
-        public void OnDisconnect(Anchor sender, IConnectable target, bool isReceiver)
+        public override void OnDisconnect(Anchor sender, Connectable target, bool isReceiver)
         {
             // todo, remove as subtask/parent task
         }
-
-        public List<Anchor> GetAnchors()
-        {
-            return anchors;
-        }
-
-        public bool CanConnect(IConnectable target)
-        {
-            foreach (Anchor anchor in anchors)
-                if (anchor.IsConnectedTo(target))
-                    return false;
-            return true;
-        }
-
         #endregion
     }
 }

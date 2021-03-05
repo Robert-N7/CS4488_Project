@@ -125,12 +125,12 @@ namespace SmartPert.View.WBS
             Canvas.ReleaseMouseCapture();
             if (!isConnecting)
                 throw new InvalidOperationException("Can't finish connection if it's not connecting");
-            CtrlHitTest test = new CtrlHitTest(Anchor1.Connectable.GetType(), Canvas);
+            CtrlHitTest test = new CtrlHitTest(typeof(Connectable), Canvas);
             Point p = Mouse.GetPosition(Canvas);
             List<DependencyObject> hits = test.Run(p, Anchor1.Connectable as DependencyObject);
             if (hits.Count > 0)
             {
-                IConnectable c = hits[0] as IConnectable;
+                Connectable c = hits[0] as Connectable;
                 Anchor2 = GetClosestConnectableAnchor(c.GetAnchors(), p, Anchor1);
             }
             OnConnectingFinish();
@@ -195,7 +195,7 @@ namespace SmartPert.View.WBS
         /// </summary>
         /// <param name="from">The origin item</param>
         /// <returns>IConnectable</returns>
-        public IConnectable GetConnected(Anchor from)
+        public Connectable GetConnected(Anchor from)
         {
             if (!IsConnected())
                 return null;

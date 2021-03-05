@@ -23,10 +23,7 @@ namespace SmartPert.View.WBS
     public partial class WBS : Page, IItemObserver
     {
         private Project project;
-        private Line connector;
-        private WBS_Task startConnector;
-        private CtrlHitTest hitTest;
-
+        private Point maxPoint;
 
         #region Properties
         public Project Project { get => project;
@@ -46,8 +43,8 @@ namespace SmartPert.View.WBS
         public WBS()
         {
             InitializeComponent();
+            maxPoint = new Point(0, 0);
             Project = Model.Model.Instance.GetProject();
-            hitTest = new CtrlHitTest(typeof(WBS_Task), Canvas);
         }
 
         ~WBS()
@@ -58,12 +55,16 @@ namespace SmartPert.View.WBS
         #endregion
 
         #region Private Methods
+
         private WBS_Task AddTaskControl(Task t, Point point, WBS_Task parent = null)
         {
             WBS_Task task = new WBS_Task() { Task = t, Canvas = Canvas };
             Canvas.SetLeft(task, point.X);
             Canvas.SetTop(task, point.Y);
-            task.Init_Anchors(Canvas);
+            if (point.X > maxPoint.X)
+                maxPoint.X = point.X;
+            if (point.Y > maxPoint.Y)
+                maxPoint.Y = point.Y;
             return task;
         }
 
@@ -74,42 +75,10 @@ namespace SmartPert.View.WBS
             foreach (Task t in project.Tasks)
             { 
                 AddTaskControl(t, point);
-                point.X += 100;
+                point.X += 150;
             }
         }
 
-        //private void Page_MouseDown(object sender, MouseButtonEventArgs e)
-        //{
-        //    if(isDrawing)
-        //    {
-        //        Canvas.ReleaseMouseCapture();
-        //        // Find the WBS_Task control and attempt to connect to it
-        //        WBS_Task found = null;
-        //        List<DependencyObject> hits = hitTest.Run(Mouse.GetPosition(Canvas));
-        //        foreach (var ctrl in hits)
-        //        {
-        //            found = (WBS_Task)ctrl;
-        //            break;  // top one
-        //        }
-        //        startConnector.Connect(found, connector);
-        //        if (found == null)
-        //        {
-        //            Console.WriteLine("Failed to find task");
-        //            Canvas.Children.Remove(connector);
-        //        }
-        //        isDrawing = false;
-        //    }
-        //}
-
-        //private void Page_MouseMove(object sender, MouseEventArgs e)
-        //{
-        //    if(isDrawing)
-        //    {
-        //        Point p = Mouse.GetPosition(Canvas);
-        //        connector.X2 = p.X;
-        //        connector.Y2 = p.Y;
-        //    }
-        //}
         #endregion
 
 

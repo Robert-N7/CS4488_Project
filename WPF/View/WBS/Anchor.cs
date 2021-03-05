@@ -10,39 +10,6 @@ using System.Windows.Media;
 
 namespace SmartPert.View.WBS
 {
-    /// <summary>
-    /// Objects that can be connected
-    /// </summary>
-    public interface IConnectable
-    {
-        /// <summary>
-        /// Determines if it can connect to target
-        /// </summary>
-        /// <param name="target">connectable target</param>
-        /// <returns>true if it can</returns>
-        bool CanConnect(IConnectable target);
-        /// <summary>
-        /// When a successful connection is made
-        /// </summary>
-        /// <param name="sender">The anchor sending signal</param>
-        /// <param name="target">Connected item</param>
-        /// <param name="isReceiver">True if it received the connection, false if it originated it</param>
-        void OnConnect(Anchor sender, IConnectable target, bool isReceiver);
-
-        /// <summary>
-        /// When a disconnect is made
-        /// </summary>
-        /// <param name="sender">The anchor sending</param>
-        /// <param name="target">Connected item that is disconnecting</param>
-        /// <param name="isReceiver">Did not originate from here if true</param>
-        void OnDisconnect(Anchor sender, IConnectable target, bool isReceiver);
-
-        /// <summary>
-        /// Get the anchors from a connectable item
-        /// </summary>
-        /// <returns>List of anchors</returns>
-        List<Anchor> GetAnchors();
-    }
 
     /// <summary>
     /// Anchor for connectors to connect to
@@ -50,9 +17,8 @@ namespace SmartPert.View.WBS
     public class Anchor : Button
     {
         private List<Connector> connectors;
-        private IConnectable connectable;
+        private Connectable connectable;
         private Canvas canvas;
-        private bool initialized;
 
         #region Properties
         public Point Point { get => 
@@ -63,7 +29,10 @@ namespace SmartPert.View.WBS
                 canvas = value;
             }
         }
-        public IConnectable Connectable { get => connectable; set => connectable = value; }
+        public Connectable Connectable { get => connectable; 
+            set { 
+                connectable = value;
+            } }
         #endregion
 
         public Anchor()
@@ -77,7 +46,7 @@ namespace SmartPert.View.WBS
         }
 
         #region Public Methods
-        public bool IsConnectedTo(IConnectable connectable)
+        public bool IsConnectedTo(Connectable connectable)
         {
             if(connectors != null)
                 foreach (Connector connector in connectors)
@@ -92,7 +61,7 @@ namespace SmartPert.View.WBS
         /// <param name="connector">connector</param>
         /// <param name="connected">the target connectable</param>
         /// <param name="isReceiver">If this object received the connection (did not start it)</param>
-        public void Connect(Connector connector, IConnectable connected, bool isReceiver)
+        public void Connect(Connector connector, Connectable connected, bool isReceiver)
         {
             if (connectors == null)
                 connectors = new List<Connector>();
@@ -106,7 +75,7 @@ namespace SmartPert.View.WBS
         /// <param name="connector">connector</param>
         /// <param name="connected">connectable that's disconnecting</param>
         /// <param name="isReceiver">is receiver</param>
-        public void Disconnect(Connector connector, IConnectable connected, bool isReceiver)
+        public void Disconnect(Connector connector, Connectable connected, bool isReceiver)
         {
             if (connectors != null)
                 connectors.Remove(connector);
@@ -128,8 +97,7 @@ namespace SmartPert.View.WBS
         /// <summary>
         /// When moving, Update the connection position
         /// </summary>
-        /// <param name="point">N/A</param>
-        public void OnMove(Point point)
+        public void OnMove()
         {
             //Point = point;
             if (connectors != null)

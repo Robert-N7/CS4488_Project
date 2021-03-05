@@ -191,6 +191,7 @@
       <DependentUpon>TaskControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\WBS\Anchor.cs" />
+    <Compile Include="View\WBS\Connectable.cs" />
     <Compile Include="View\WBS\Connector.cs" />
     <Compile Include="View\WBS\WBS_Task.xaml.cs">
       <DependentUpon>WBS_Task.xaml</DependentUpon>

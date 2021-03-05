@@ -204,7 +204,7 @@ namespace SmartPert
 
         private void AddTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = MainContent.Content != null && MainContent.Content.GetType() == typeof(WorkSpace);
+            e.CanExecute = MainContent.Content != null && (MainContent.Content.GetType() == typeof(WorkSpace) || MainContent.Content.GetType() == typeof(WBS));
         }
 
         private void AddTask_Execute(object sender, ExecutedRoutedEventArgs e)

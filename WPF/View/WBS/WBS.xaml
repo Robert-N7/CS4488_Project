@@ -16,7 +16,7 @@
       Title="WBS">
 
     <Grid>
-        <ScrollViewer>
+        <ScrollViewer VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Visible">
             <Canvas x:Name="Canvas">
 
             </Canvas>
