@@ -10,6 +10,7 @@ namespace SmartPert.Model
     public interface IModel
     {
         #region Project Methods
+        bool IsValidProjectName(string name);
         Project GetProject();
         void SetProject(Project project);
         List<Project> GetProjectList();
@@ -20,7 +21,10 @@ namespace SmartPert.Model
 
         #region Task Methods
         Task GetTaskById(int id);
+        HashSet<Task> GetTaskSet();
+
         List<Task> GetTasks();
+
         Task CreateTask(string name, DateTime start, DateTime? end, string description = "", int duration = 1, int maxDuration = 0, int minDuration = 0);
         void DeleteTask(Task task);
 
@@ -30,6 +34,8 @@ namespace SmartPert.Model
         #region User Methods
         List<User> GetUsers();
         User CreateUser(string name);
+        User CreateOrGetUser(string name);
+        User GetCurrentUser();
 
         bool IsValidNewUsername(string name);
 

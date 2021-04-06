@@ -5,10 +5,11 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 using SmartPert.Annotations;
 using SmartPert.Model;
+using SmartPert.View;
+using SmartPert.View.Pages;
 using SmartPert.View.ViewClasses;
 
 namespace SmartPert.ViewModels
@@ -17,23 +18,31 @@ namespace SmartPert.ViewModels
     /// The interaction logic for the workspace view
     /// Implemented by: Makayla Linnastruth
     /// </summary>
-    class WorkSpaceViewModel : INotifyPropertyChanged
+    public class WorkSpaceViewModel : INotifyPropertyChanged, IViewModel
     {
         private ObservableCollection<RowData> _rowData;
+        private ObservableCollection<ToolTipData> _tooltipData;
+        private ToolTipProjectData _projectTooltip;
         private Project _Project;
+        private WorkSpace workspace;
         private List<string> _headers = new List<string>();
         private String[] _weekDayAbbrev = { "S", "M", "T", "W", "T", "F", "S" };
 
         /// <summary>
         /// Initializes an instance of the WorkSpaceViewModel class
         /// </summary>
-        public WorkSpaceViewModel()
+        public WorkSpaceViewModel(WorkSpace workSpace)
         {
+            this.workspace = workSpace;
             //Would get the Project we are working with
             this._rowData = new ObservableCollection<RowData>();
-            _Project = Model.Model.Instance.GetProject();
+            Model.Model model = Model.Model.GetInstance(this);
+            _Project = model.GetProject();
+            this._tooltipData = new ObservableCollection<ToolTipData>();
             _headers = GetWeekHeader();
             LoadData();
+            LoadToolTipData();
+            LoadProjectData();
         }
 
         #region Properties
@@ -44,7 +53,12 @@ namespace SmartPert.ViewModels
 
         public int DaySpan
         {
-            get { return (((DateTime)this.Project.CalculateLastProjectDate()).Date - this.Project.StartDate.Date).Days; }
+            get {
+                int days = (((DateTime)this.Project.CalculateLastProjectDate()).Date - this.Project.StartDate.Date).Days;
+                if (days <= 0)      /* Ensure natural number for span */
+                    return 1;
+                return days;
+            }
         }
 
         public int GridOffset
@@ -68,6 +82,31 @@ namespace SmartPert.ViewModels
             }
         }
 
+        /// <summary>
+        /// Property for Task Tooltip collection.
+        /// Created 2/25/2021 by Tyler Kness-Miller
+        /// </summary>
+        public ObservableCollection<ToolTipData> TooltipData
+        {
+            get { return _tooltipData; }
+            set
+            {
+                this._tooltipData = value;
+                OnPropertyChanged("TooltipData");
+
+            }
+        }
+
+        /// <summary>
+        /// Property for Project Tooltip.
+        /// Created 2/25/2021 by Tyler Kness-Miller
+        /// </summary>
+        public ToolTipProjectData ProjectTooltip
+        {
+            get { return _projectTooltip; }
+            set { this._projectTooltip = value; }
+        }
+
         public List<string> Headers
         {
             get { return _headers; }
@@ -77,7 +116,9 @@ namespace SmartPert.ViewModels
         {
             get
             {
-                return ( this.Project.StartDate.Date.AddDays(-GridOffset).CompareTo(DateTime.Now) <= 0 && ((DateTime)this.Project.CalculateLastProjectDate()).CompareTo(DateTime.Now) >= 0 );
+                DateTime min = this.Project.StartDate.Date.AddDays(-GridOffset);
+                DateTime max = Project.StartDate.AddDays(DaySpan);
+                return (min.CompareTo(DateTime.Now) <= 0 && max.CompareTo(DateTime.Now) >= 0 );
             }
         }
 
@@ -98,11 +139,53 @@ namespace SmartPert.ViewModels
         {
             RowData num1 = new RowData(Project.Name, GridOffset + 1, DaySpan, true);
             this.RowData.Add(num1);
-            for (int i = 0; i < Project.Tasks.Count; i++)
+            foreach (Model.Task task in Project.SortedTasks)
             {
-                RowData num2 = new RowData(Project.Tasks[i].Name, (((DateTime)this.Project.Tasks[i].StartDate).Date - ((DateTime)this.Project.StartDate).Date).Days + GridOffset + 1, (((DateTime)this.Project.Tasks[i].CalculateLastTaskDate()).Date - ((DateTime)this.Project.Tasks[i].StartDate).Date).Days, false);
+                RowData num2 = new RowData(task.Name,
+                    startDateCol: (((DateTime)task.StartDate).Date - ((DateTime)this.Project.StartDate).Date).Days + GridOffset + 1,
+                    colSpan: (((DateTime)task.CalculateLastTaskDate()).Date - ((DateTime)task.StartDate).Date).Days,
+                    isProject: false,
+                    endDateSpan: task.EndDate != null ? ((DateTime)task.EndDate - task.StartDate).Days : -1,
+                    minEstSpan: task.MinDuration,
+                    maxEstSpan: task.MaxDuration - task.LikelyDuration,
+                    likelyEstSpan: task.LikelyDuration - task.MinDuration,
+                    timedItem: task,
+                    subTaskLevel: GetSubLevel(task)
+                    );
                 this.RowData.Add(num2);
             }
+        }
+
+        private int GetSubLevel(Task t)
+        {
+            if (t.ParentTask == null)
+                return 0;
+            return GetSubLevel(t.ParentTask) + 1;
+        }
+
+        /// <summary>
+        /// A method that created ToolTip data classes that hold data for each task and adds them to a collection. Collection indexes are the same for this and RowData starting at index 1.
+        /// Created 2/25/2021 by Tyler Kness-Miller
+        /// </summary>
+        public void LoadToolTipData()
+        {
+            for(int i = 0; i < Project.Tasks.Count; i++)
+            {
+                //Task could also have been a reference to System.Threading.Task, so below declaration was necessary.
+                SmartPert.Model.Task t = Project.SortedTasks[i];
+
+                ToolTipData data = new ToolTipData(t.Name, t.StartDate, t.EndDate, t.LikelyDuration, t.MaxDuration, t.MinDuration, t.Description);
+                this.TooltipData.Add(data);
+            }
+        }
+
+        /// <summary>
+        /// A method that sets the Project data for  its tooltip.
+        /// Created 2/25/2021 by Tyler Kness-Miller
+        /// </summary>
+        public void LoadProjectData()
+        {
+            ProjectTooltip = new ToolTipProjectData(Project.Name, Project.StartDate, Project.EndDate, Project.Description);
         }
 
         /// <summary>
@@ -112,13 +195,9 @@ namespace SmartPert.ViewModels
         public List<string> GetWeekHeader()
         {
             List<String> weekHeaders = new List<string>();
-            DateTime headerStore = this.Project.StartDate;
-            while ((((DateTime)this.Project.CalculateLastProjectDate())-headerStore).Days > 0 )
+            DateTime headerStore = this.Project.StartDate.AddDays(-GridOffset);
+            for(int i = 0, max = (DaySpan + 7 - 1 + GridOffset) / 7; i < max; i++)
             {
-                if (headerStore == Project.StartDate)
-                {
-                    headerStore = Project.StartDate.AddDays(-(this.GridOffset));
-                }
                 weekHeaders.Add(String.Format("{0} {1}", headerStore.ToString("MMM"), headerStore.ToString("dd")));
                 headerStore = headerStore.AddDays(7);
             }
@@ -134,6 +213,23 @@ namespace SmartPert.ViewModels
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public void OnDisconnect()
+        {
+            // do nothing
+        }
+
+        public void OnModelUpdate(Project p)
+        {
+            _Project = p;
+            _headers = GetWeekHeader();
+            this.RowData.Clear();
+            TooltipData.Clear();
+            LoadData();
+            LoadToolTipData();
+            LoadProjectData();
+            workspace.OnWorkspaceModelUpdate(this);
         }
         #endregion
     }

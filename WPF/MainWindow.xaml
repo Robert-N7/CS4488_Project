@@ -4,36 +4,39 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SmartPert"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
+        Closed="Window_Closed"
         Title="SmartPert" Height="500" Width="900"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         TextElement.FontWeight="Regular"
         TextElement.FontSize="13"
-        TextOptions.TextFormattingMode="Ideal" 
-        TextOptions.TextRenderingMode="Auto"        
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
         Background="{DynamicResource MaterialDesignPaper}"
         FontFamily="{DynamicResource MaterialDesignFont}">
     <!--#region Commands -->
     <Window.CommandBindings>
-        <CommandBinding Command="New" CanExecute="CommandBinding_CanExecute" Executed="New_Executed" />
-        <CommandBinding Command="Open" CanExecute="CommandBinding_CanExecute" Executed="Open_Execute"/>
-        <CommandBinding Command="Print" CanExecute="CommandBinding_CanExecute" Executed="Print_Execute"/>
+        <CommandBinding Command="New" CanExecute="CommandBinding_CanIfLoggedIn" Executed="New_Executed" />
+        <CommandBinding Command="Open" CanExecute="CommandBinding_CanIfLoggedIn" Executed="Open_Execute"/>
+        <CommandBinding Command="Print" CanExecute="CommandBinding_CanIfLoggedIn" Executed="Print_Execute"/>
         <CommandBinding Command="Close" CanExecute="CommandBinding_CanExecute" Executed="Exit_Execute" />
         <CommandBinding Command="Undo" CanExecute="Undo_CanExecute" Executed="Undo_Execute" />
         <CommandBinding Command="Redo" CanExecute="Redo_CanExecute" Executed="Redo_Execute" />
         <CommandBinding Command="Cut" CanExecute="Cut_CanExecute" Executed="Cut_Execute" />
         <CommandBinding Command="Copy" CanExecute="Copy_CanExecute" Executed="Copy_Execute"/>
         <CommandBinding Command="Paste" CanExecute="Paste_CanExecute" Executed="Paste_Execute"/>
-        <CommandBinding Command="{x:Static local:CustomCommands.AddTaskCommand}" CanExecute="AddTask_CanExecute" Executed="AddTask_Execute"/>
-        <CommandBinding Command="{x:Static local:CustomCommands.DBConnectCommand}" CanExecute="CommandBinding_CanExecute" Executed="DBConnect_Execute"/>
+        <CommandBinding Command="{x:Static local:CustomCommands.AddTaskCommand}" CanExecute="CommandBinding_CanIfActiveProject" Executed="AddTask_Execute"/>
+        <CommandBinding Command="{x:Static local:CustomCommands.DBConnectCommand}" Executed="DBConnect_Execute"/>
         <!-- <CommandBinding Command="{x:Static local:CustomCommands.OptionsCommand}" CanExecute="CommandBinding_CanExecute" Executed="Options_Execute"/> -->
         <CommandBinding Command="{x:Static local:CustomCommands.RefreshCommand}" Executed="Refresh_Execute"/>
-        <CommandBinding Command="{x:Static local:CustomCommands.DocsCommand}" CanExecute="CommandBinding_CanExecute" Executed="Docs_Execute"/>
-        <CommandBinding Command="{x:Static local:CustomCommands.AboutCommand}" CanExecute="CommandBinding_CanExecute" Executed="About_Execute"/>
+        <CommandBinding Command="{x:Static local:CustomCommands.DocsCommand}" Executed="Docs_Execute"/>
+        <CommandBinding Command="{x:Static local:CustomCommands.AboutCommand}" Executed="About_Execute"/>
         <CommandBinding Command="{x:Static local:CustomCommands.AddHelpCommand}" Executed="Additional_Help"/>
         <CommandBinding Command="{x:Static local:CustomCommands.SettingsCommand}" Executed="Settings_Execute"/>
         <CommandBinding Command="{x:Static local:CustomCommands.ViewGanttCommand}" CanExecute="CanIf_HasProject" Executed="CommandGanttView_Executed"/>
         <CommandBinding Command="{x:Static local:CustomCommands.ViewWBSCommand}" CanExecute="CanIf_HasProject" Executed="CommandWBSView_Executed"/>
+        <CommandBinding Command="{x:Static local:CustomCommands.AcctSettings}" Executed="Account_Execute"/>
     </Window.CommandBindings>
     <Window.InputBindings>
         <KeyBinding Key="N" Modifiers="Control" Command="New"/>
@@ -52,6 +55,11 @@
         <!--#region Menus-->
         <DockPanel>
             <Menu DockPanel.Dock="Top" x:Name="TopMenu" IsMainMenu="True">
+                <Menu.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <DockPanel HorizontalAlignment="Stretch"/>
+                    </ItemsPanelTemplate>
+                </Menu.ItemsPanel>
                 <MenuItem Header="_File" x:Name="FileMenu">
                     <MenuItem Command="New" >
                     </MenuItem>
@@ -100,6 +108,13 @@
                     <Separator />
                     <MenuItem Command="{x:Static local:CustomCommands.AboutCommand}" />
                 </MenuItem>
+                <MenuItem Header="_Account" HorizontalAlignment="Right">
+                    <MenuItem.Icon>
+                        <materialDesign:PackIcon Kind="AccountCircle"
+                                                 Foreground="{StaticResource PrimaryHueMidBrush}"/>
+                    </MenuItem.Icon>
+                    <MenuItem Command="{x:Static local:CustomCommands.AcctSettings}"/>
+                </MenuItem>
             </Menu>
             <TextBox AcceptsReturn="True" />
         </DockPanel>
@@ -110,22 +125,22 @@
             <Frame x:Name="MainContent" Margin="10,54,10,10" NavigationUIVisibility="Hidden"/>
         </Border>
         <!--#endregion-->
-        
+
         <!--#region Connection String-->
         <!-- It's important that this is in the end of the XAML as it needs to be on top of everything else! -->
         <Grid x:Name="InputBox" Visibility="Collapsed">
             <Grid Background="Black" Opacity="0.5"/>
             <Border
                 MinWidth="250"
-                Background="LightBlue" 
-                BorderBrush="Black" 
-                BorderThickness="1" 
-                CornerRadius="0,55,0,55" 
-                HorizontalAlignment="Center" 
+                Background="LightBlue"
+                BorderBrush="Black"
+                BorderThickness="1"
+                CornerRadius="0,55,0,55"
+                HorizontalAlignment="Center"
                 VerticalAlignment="Center">
                 <StackPanel>
                     <TextBlock Margin="10" FontWeight="Bold" FontFamily="Cambria"><Run Text="Database Connection String:     "/><InlineUIContainer>
-                            <Button HorizontalAlignment="Right" Content="?" Background="{x:Null}" Foreground="Yellow" BorderBrush="{x:Null}" 
+                            <Button HorizontalAlignment="Right" Content="?" Background="{x:Null}" Foreground="Yellow" BorderBrush="{x:Null}"
                                     ToolTip="Used to connect to database. Consists of a series of Key Value pairs separated by semicolons (SqlConnection.ConnectionString)"
                                     Click="ConnectString_GetHelp"
                                     />

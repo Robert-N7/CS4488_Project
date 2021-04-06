@@ -23,10 +23,12 @@ namespace SmartPert.View.Windows
     public partial class TaskEditor : Window, IItemObserver
     {
         private Task task;
+        private Task parentTask;
         private bool isLoading;
+        private static DateTime defaultStartDate = DateTime.Now;
 
         #region Properties
-        private Task Task { 
+        private Task Task {
             get => task;
             set {
                 task = value;
@@ -45,11 +47,12 @@ namespace SmartPert.View.Windows
         /// Constructor for Task Editor, task is required for editing
         /// </summary>
         /// <param name="task">The underlying task</param>
-        public TaskEditor(Task task = null)
+        public TaskEditor(Task task = null, Task parentTask = null)
         {
             InitializeComponent();
             DataContext = this;
             isLoading = false;
+            this.parentTask = parentTask;
             Owner = Application.Current.MainWindow;
             Assignees = new ObservableCollection<User>();
             if (task != null)
@@ -58,8 +61,7 @@ namespace SmartPert.View.Windows
                 LoadTaskData(task);
             } else      // Set a default start that makes sense (now)
             {
-                DateTime projectStart = Model.Model.Instance.GetProject().StartDate;
-                StartDate.SelectedDate = DateTime.Now > projectStart ? DateTime.Now : projectStart;
+                StartDate.SelectedDate = defaultStartDate;
             }
         }
 
@@ -85,13 +87,17 @@ namespace SmartPert.View.Windows
         #region Commands
         private void createTask()
         {
+            ICmd.BeginTransaction();
             CreateTaskCmd cmd = new CreateTaskCmd(TaskName.Text, (DateTime)StartDate.SelectedDate, EndDate.SelectedDate,
                 MostLikelyDuration.Value, MaxDuration.Value, MinDuration.Value, TaskDescription.Text);
             if(cmd.Run())
             {
+                if (parentTask != null)
+                    new AddSubTaskCmd(parentTask, cmd.Task).Run();
                 Task = cmd.Task;
                 LoadTaskData(task);
             }
+            ICmd.PostTransaction();
         }
 
         private void runTaskEdit()
@@ -147,15 +153,10 @@ namespace SmartPert.View.Windows
         #region Event Handlers
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            if (!AssigneePopup.IsFocused && !cb_assign.IsMouseOver && !IsMouseOver)
+            try
             {
-                // Todo: Known issue when creating task and pressing tab this throws null exception
-                try
-                {
-                    Close();
-                }
-                catch (InvalidOperationException) { }
-            }
+                Close();
+            } catch(InvalidOperationException) { }
         }
 
 
@@ -209,7 +210,6 @@ namespace SmartPert.View.Windows
         private void On_Max_Change(object sender, int val)
         {
             // Ensure Max >= most likely
-            Console.WriteLine(val);
             if (val < MostLikelyDuration.Value)
                 MostLikelyDuration.Value = val;
             else
@@ -224,7 +224,10 @@ namespace SmartPert.View.Windows
         private void StartDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
         {
             if (task == null || StartDate.SelectedDate != task.StartDate)
+            {
+                defaultStartDate = (DateTime)StartDate.SelectedDate;  // update default start
                 On_Input();
+            }
         }
 
         private void TaskDescription_LostFocus(object sender, RoutedEventArgs e)
@@ -251,8 +254,9 @@ namespace SmartPert.View.Windows
                 Assignees.Add(user);
             ObservableCollection<object> items = cb_assign.Items;
             items.Clear();
-            foreach (object o in task.Proj.Workers)
+            foreach (object o in Model.Model.Instance.GetUsers())
                 items.Add(o);
+            cb_assign.Items = items;
         }
 
         private void AssignBtn_MouseEnter(object sender, MouseEventArgs e)

@@ -21,9 +21,7 @@ using MessageBox = System.Windows.MessageBox;
 using PrintDialog = System.Windows.Controls.PrintDialog;
 using SmartPert.View.WBS;
 
-/// <summary>
-/// Name space for the SmartPert Pert Application
-/// </summary>
+
 namespace SmartPert
 {
     /// <summary>
@@ -32,13 +30,12 @@ namespace SmartPert
     public partial class MainWindow : Window, IViewModel
     {
         static private Random random = new Random();
-        private IModel model;
-        //private Chart chart;
+        private Model.Model model;
         private WorkSpace workSpace;
         private WBS wbs;
         private ObservableCollection<MenuItemViewModel> items;
         public ObservableCollection<MenuItemViewModel> OpenItems { get => items; }
-        
+
 
         public MainWindow()
         {
@@ -47,20 +44,8 @@ namespace SmartPert
             items = new ObservableCollection<MenuItemViewModel>();
             DataContext = this;
             InitModel();
-        }
-
-        public void StateSwitcher()
-        {
-            Project project = Model.Model.Instance.GetProject();
-            if (project == null)
-            {
-                new ProjectCreator().ShowDialog();
-            }
-            else
-            {
-                workSpace = new WorkSpace();
-                this.MainContent.Content = workSpace;
-            }
+            StateSwitcher.Instance.Start(this);
+            PopulateProjects();
         }
 
         void HandleException(object sender, DispatcherUnhandledExceptionEventArgs args)
@@ -81,30 +66,25 @@ namespace SmartPert
         private void InitModel()
         {
             model = Model.Model.GetInstance(this);
-            // Check for database connection
-            if (!model.IsConnected())
-            {
-                ShowDBConnectionSettings();
-            }
-            else
-            {
-                // if we're connected then login
-                LoginWindow login = new LoginWindow(model);
-                login.ShowDialog();
-            }
-            OnModelUpdate(model.GetProject());
         }
 
 #region Menu bar
         private void New_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            new ProjectCreator().ShowDialog();
+            StateSwitcher.Instance.OnProjectCreateOrEdit();
         }
 
         private void CommandBinding_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
             e.CanExecute = true;
         }
+
+        private void CommandBinding_CanIfLoggedIn(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = StateSwitcher.Instance.IsLoggedIn;
+        }
+
+        private void CommandBinding_CanIfActiveProject(object sender, CanExecuteRoutedEventArgs e) => e.CanExecute = StateSwitcher.Instance.HasActiveProject;
 
         private void Open_Execute(object sender, ExecutedRoutedEventArgs e)
         {
@@ -209,7 +189,7 @@ namespace SmartPert
 
         private void AddTask_Execute(object sender, ExecutedRoutedEventArgs e)
         {
-            new TaskEditor().ShowDialog();
+            StateSwitcher.Instance.OnTaskCreateOrEdit();
         }
 
         public void ShowDBConnectionSettings()
@@ -243,6 +223,7 @@ namespace SmartPert
             {
                 UpdateDBStatus("Connected", Brushes.Green);
                 InputBox.Visibility = Visibility.Collapsed;
+                StateSwitcher.Instance.TryLogin();
             }
             else
                 UpdateDBStatus("Connection failed!", Brushes.Red);
@@ -316,11 +297,13 @@ namespace SmartPert
 
         private void Settings_Execute(object sender, ExecutedRoutedEventArgs e)
         {
+            StateSwitcher.Instance.OnProjectCreateOrEdit(model.GetProject());
             ProjectCreator pc = new ProjectCreator();
-            Project p = model.GetProject();
-            if (p != null)
-                pc.Project = p;
-            pc.ShowDialog();
+        }
+
+        private void Account_Execute(object sender, ExecutedRoutedEventArgs e)
+        {
+            // For Makayla
         }
 
         private void CanIf_HasProject(object sender, CanExecuteRoutedEventArgs e)
@@ -350,7 +333,6 @@ namespace SmartPert
         public void OnModelUpdate(Project p)
         {
             PopulateProjects();
-            StateSwitcher();
         }
 
         private void PopulateProjects()
@@ -359,7 +341,15 @@ namespace SmartPert
             foreach (Project p in model.GetProjectList())
                 items.Add(new MenuItemViewModel(p.Name, new OpenProjectCommand(model, p)));
         }
+
+        public void OnDisconnect()
+        {
+        }
         #endregion
 
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            model.Shutdown();
+        }
     }
 }

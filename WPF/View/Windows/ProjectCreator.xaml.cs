@@ -57,7 +57,8 @@ namespace SmartPert.View.Windows
                     Title = "Project Creator";
                     SubmitBtn.Visibility = Visibility.Visible;
                     CancelBtn.Visibility = Visibility.Visible;
-                    project.UnSubscribe(this);
+                    if(project != null)
+                        project.UnSubscribe(this);
                 }
 
             }
@@ -151,7 +152,8 @@ namespace SmartPert.View.Windows
             bool result = Validate();
             if (result && isEditMode)
             {
-                new EditProjectCmd(Project, PrjName.Text, (DateTime) StartDatePicker.SelectedDate, EndDatePicker.SelectedDate, PrjDescription.Text).Run();
+                new EditProjectCmd(Project, PrjName.Text, (DateTime) StartDatePicker.SelectedDate, EndDatePicker.SelectedDate, PrjDescription.Text, 
+                    project.LikelyDuration, project.MaxDuration, project.MinDuration).Run();
             }
             return result;
         }
